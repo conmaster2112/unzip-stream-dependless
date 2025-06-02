@@ -14,6 +14,9 @@ importers:
       '@types/node':
         specifier: ^22.15.18
         version: 22.15.18
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.2
       rolldown:
         specifier: 1.0.0-beta.8
         version: 1.0.0-beta.8
@@ -333,6 +336,9 @@ packages:
     peerDependenciesMeta:
       picomatch:
         optional: true
+
+  fflate@0.8.2:
+    resolution: {integrity: sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A==}
 
   get-tsconfig@4.10.0:
     resolution: {integrity: sha512-kGzZ3LWWQcGIAmg6iWvXn0ei6WDtV26wzHRMwDSzmAbcXrTEXxHy6IehI6/4eT6VRKyMP1eF1VqwrVUmE/LR7A==}
@@ -682,6 +688,8 @@ snapshots:
   fdir@6.4.4(picomatch@4.0.2):
     optionalDependencies:
       picomatch: 4.0.2
+
+  fflate@0.8.2: {}
 
   get-tsconfig@4.10.0:
     dependencies:
