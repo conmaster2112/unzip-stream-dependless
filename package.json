@@ -23,17 +23,21 @@
   "author": "https://github.com/conmaster2112",
   "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
     "package.json",
     "README.md",
-    "dist/index.js"
+    "dist/index.js",
+    "dist/index.d.ts"
   ],
   "devDependencies": {
     "@types/deno": "^2.3.0",
     "@types/node": "^22.15.18",
     "fflate": "^0.8.2",
-    "rolldown": "1.0.0-beta.8",
+    "rolldown": "1.0.0-beta.13-commit.024b632",
+    "rolldown-plugin-dts": "^0.13.11",
     "tsdown": "0.11.0-beta.5",
+    "typescript": "^5.8.3",
     "unzip-stream-dependless": "link:"
   },
   "packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"

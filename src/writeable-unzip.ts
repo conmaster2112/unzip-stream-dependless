@@ -5,7 +5,7 @@ import { ZipStreamExtractor } from "./zip-extractor";
 
 export class UnzipStreamConsumer extends WritableStream<Uint8Array> {
     protected readonly unzipExtractor: ZipStreamExtractor;
-    protected readonly transformer = new TransformStream();
+    protected readonly transformer:TransformStream  = new TransformStream();
     public constructor(options?: UnzipStreamConsumerOptions){
         super({
             abort: (e)=>writer.abort(e),
@@ -21,7 +21,7 @@ export class UnzipStreamConsumer extends WritableStream<Uint8Array> {
         this.unzipExtractor.onFileRead = (r, s)=>options?.onFile?.(r, options?.pipeThrough?.(r, s)??fallbackPipeThrough(r, s));
         this.unzipExtractor.onDirectoryInfo = (r)=>options?.onDirectory?.(r);
         const fallbackPipeThrough = (report: EntryReport, readable: ReadableStream<BufferSlice>): ReadableStream<BufferSlice> => {
-            if(report.compressionMethod === CompressionMethod.Deflate) return readable.pipeThrough(new DecompressionStream("deflate-raw"));
+            if(report.compressionMethod === CompressionMethod.Deflate) return readable.pipeThrough(new DecompressionStream("deflate-raw")) as ReadableStream<BufferSlice>
             return readable;
         }
     }

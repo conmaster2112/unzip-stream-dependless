@@ -7,7 +7,7 @@ import { CentralDirectoryHeader } from "./interfaces/central-directory-header";
 import { ZipBitFlags } from "./enums/bit-flags";
 
 export class ZipStreamExtractor extends StreamDataProvider {
-    public static readonly textDecoder = new TextDecoder();
+    public static readonly textDecoder: TextDecoder = new TextDecoder();
     public onFileRead?: (report: EntryReport, stream: ReadableStream<BufferSlice>)=>void
     public onDirectoryInfo?: (report: EntryReport)=>void
     public constructor(
@@ -22,18 +22,19 @@ export class ZipStreamExtractor extends StreamDataProvider {
 
             const magic = this.getMagic();
             this.reader.movePointer(4);
-            if (typeof this[magic] !== "function")
+            if (typeof this[magic as keyof this] !== "function")
                 throw new Error("Unexpected magic number: " + magic.toString(16) + " " + MagicNumber[magic]);
 
             // Run correct data processor
-            const endExpected = yield* this[magic]();
+            const endExpected = yield* this[magic as MagicNumber.EndOfCentralDirectory]();
             if(endExpected) {
                 yield -1;
                 return;
             }
         }
     }
-    protected *[MagicNumber.EndOfCentralDirectory](): Generator<number, true, number> {
+    // as MagicNumber.EndOfCentralDirectory
+    protected *[101010256](): Generator<number, true, number> {
         const headerSize = yield END_OF_CENTRAL_DIRECTORY_HEADER_SIZE;
         if (headerSize < END_OF_CENTRAL_DIRECTORY_HEADER_SIZE)
             throw new Error("Invalid EndOfCentralDirectoryHeader size: " + headerSize);
@@ -46,7 +47,8 @@ export class ZipStreamExtractor extends StreamDataProvider {
         // End expected
         return true;
     }
-    protected *[MagicNumber.CentralDirectoryHeader](): Generator<number, any, number> {
+    // as MagicNumber.CentralDirectoryHeader
+    protected *[33639248](): Generator<number, any, number> {
         const headerSize = yield CENTRAL_DIRECTORY_HEADER_SIZE;
         if (headerSize < CENTRAL_DIRECTORY_HEADER_SIZE)
             throw new Error("Invalid CentralDirectoryHeader size: " + headerSize);
@@ -56,7 +58,8 @@ export class ZipStreamExtractor extends StreamDataProvider {
         yield * this.reader.batchSkip(header.extraDataLength);
         yield * this.reader.batchSkip(header.commentLength);
     }
-    protected *[MagicNumber.LocalFileHeader](): Generator<number, any, number> {
+    // as MagicNumber.LocalFileHeader
+    protected *[67324752](): Generator<number, any, number> {
         // Read up whole header data
         const headerSize = yield LOCAL_FILE_HEADER_SIZE;
         if (headerSize < LOCAL_FILE_HEADER_SIZE) return void console.error("Invalid header size");
@@ -105,7 +108,7 @@ export class ZipStreamExtractor extends StreamDataProvider {
         let generator: Iterable<number, unknown, number>;
 
         if (report.isStreamSized){
-            const data = this.reader._createStreamController();
+            const data = this.reader.createStreamController();
             readable = data.readable;
             generator = this.streamReadData(data.controller, report.isZIP64);
         }

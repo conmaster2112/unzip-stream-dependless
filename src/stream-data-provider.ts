@@ -1,16 +1,31 @@
 
-// Abstract class that consumes data from a stream
-type StreamDataProviderReaderType = typeof StreamDataProvider.ReaderConstructor
-export type Reader = StreamDataProviderReaderType extends new (...params: any[])=>infer T?T:never;
+interface StreamDataProviderReader {
+     createStreamController<T>(): {readable: ReadableStream<T>, controller: ReadableStreamController<T>}
+  createReadable(length: number): Generator<number, void, number> & {
+    readable: ReadableStream<BufferSlice>;
+  };
+  bufferUp<T extends BufferSlice>(buffer: T): Generator<number, T, number>;
+  batchSkip(length: number): Generator<number, void, number>;
+  movePointer(length: number): void;
+  rentSlice(length: number): BufferSlice;
+  readUint8(): number;
+  readUint16(): number;
+  readUint32(): number;
+  readBigUint64(): bigint;
+  rentDataView(length: number): DataView<ArrayBuffer>;
+  bufferUpController(controller: ReadableStreamController<BufferSlice>, length: number, close?: boolean): Generator<number, void, number>
+}
+
+export type Reader = StreamDataProviderReader;
 
 export type BufferSlice = Uint8Array<ArrayBuffer>;
 
 export abstract class StreamDataProvider {
-    public static ReaderConstructor = class Readable {
+    public static ReaderConstructor: new (_: StreamDataProvider)=>StreamDataProviderReader = class Readable {
         public constructor(
             protected readonly dataProvider: StreamDataProvider) {
         }
-        public _createStreamController<T>(): {readable: ReadableStream<T>, controller: ReadableStreamController<T>}{
+        public createStreamController<T>(): {readable: ReadableStream<T>, controller: ReadableStreamController<T>}{
             let controller: ReadableStreamController<T>;
             const readable = new ReadableStream<T>({start(c) {controller = c}});
             return {
@@ -18,7 +33,7 @@ export abstract class StreamDataProvider {
                 readable
             }
         }
-        public * _bufferUpController(controller: ReadableStreamController<BufferSlice>, length: number, close: boolean = true): Generator<number, void, number>{
+        public * bufferUpController(controller: ReadableStreamController<BufferSlice>, length: number, close: boolean = true): Generator<number, void, number>{
             let offset = 0;
             while (offset < length) {
                 const available = yield 1;
@@ -32,8 +47,8 @@ export abstract class StreamDataProvider {
                 controller.close();
         }
         public createReadable(length: number): (Generator<number, void, number> & {readable: ReadableStream<BufferSlice>}){
-            const {controller, readable} = this._createStreamController<BufferSlice>();
-            const generator = this._bufferUpController(controller, length);
+            const {controller, readable} = this.createStreamController<BufferSlice>();
+            const generator = this.bufferUpController(controller, length);
             (generator as (Generator<number, void, number> & {readable: ReadableStream<BufferSlice>})).readable = readable;
             return generator as (Generator<number, void, number> & {readable: ReadableStream<BufferSlice>});
         }
@@ -90,22 +105,22 @@ export abstract class StreamDataProvider {
             return _;
         }
     }
-    public readonly reader = new StreamDataProvider.ReaderConstructor(this);
+    public readonly reader: StreamDataProviderReader = new StreamDataProvider.ReaderConstructor(this);
     // DataView and BufferSlice for buffer manipulation
     protected readonly view: DataView;
     protected readonly u8Array: BufferSlice;
     // Pointers to track active data within the buffer
     protected absoluteOffset = 0;
     private _activePointer = 0;
-    protected get activePointer() { return this._activePointer; }
-    protected moveActivePointer(offset: number) {
+    protected get activePointer(): number { return this._activePointer; }
+    protected moveActivePointer(offset: number): void {
         this._activePointer += offset;
         this.absoluteOffset += offset;
     }
-    protected activeLength = 0;
+    protected activeLength: number = 0;
     protected maxSubChunkSize: number;
     // Flag to check if the consumer is running
-    private isRunning = false;
+    private isRunning: boolean = false;
 
     // Constructor to initialize buffer and DataView
     public constructor(
@@ -120,13 +135,13 @@ export abstract class StreamDataProvider {
     protected abstract getProgram(): Iterator<number, unknown, number>;
 
     // Method to consume data from a readable stream
-    public async consume(readable: AsyncIterable<BufferSlice>) {
+    public async consume(readable: AsyncIterable<BufferSlice>): Promise<void> {
         if (this.isRunning) throw new ReferenceError("Each consumer instance can run only one task at the time. You can reset this instance and run next task once current task quits.");
-        return await this.process(readable).finally(() => this.isRunning = false);
+        return void await this.process(readable).finally(() => this.isRunning = false);
     }
 
     // Private method to process the readable stream
-    private async process(_readable: AsyncIterable<BufferSlice>) {
+    private async process(_readable: AsyncIterable<BufferSlice>): Promise<void> {
         this.isRunning = true; // Mark the consumer as running
         const program = this.getProgram(); // Get the program iterator
         let requested = 0; // Initialize the requested size
@@ -156,14 +171,14 @@ export abstract class StreamDataProvider {
     }
 
     // Method to set data in the buffer
-    protected set(u8: BufferSlice) {
+    protected set(u8: BufferSlice): void {
         if (this.activeLength + u8.length > this.buffer.byteLength) throw new Error(`Buffer overflow error, ${this.activeLength}, ${this.buffer.byteLength}, ${u8.length}`);
         this.u8Array.set(u8, this.activeLength);
         this.activeLength += u8.length;
     }
 
     // Method to flush the buffer
-    protected flush() {
+    protected flush(): void {
         if (this.activePointer <= 0 || this.activeLength <= 0) return;
         this.u8Array.set(this.u8Array.subarray(this.activePointer, this.activeLength), 0);
         this.activeLength -= this.activePointer;
@@ -171,7 +186,7 @@ export abstract class StreamDataProvider {
     }
 
     // Method to reset the consumer
-    public reset() {
+    public reset(): void {
         if (this.isRunning) throw new ReferenceError("Instance is locked, you can reset only instance with no tasks running.");
         this.activeLength = 0;
         this._activePointer = 0;

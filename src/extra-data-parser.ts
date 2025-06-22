@@ -17,7 +17,7 @@ export class ExtraDataParser<T = {}>{
         return this as ExtraDataParser<T & S>;
     }
 }
-export const DEFAULT_PARSERS = {
+export const DEFAULT_PARSERS: Record<number, ExtraDataParserFunction<any>> = {
     *[ExtraFieldId.UnicodeFileName](reader, info){
         yield 1; // Ensures at least 1 byte is available to read
         const version = reader.readUint8();
@@ -89,4 +89,4 @@ export const DEFAULT_PARSERS = {
 
         return _;
     },
-} satisfies Record<number, ExtraDataParserFunction<any>>;
+};
